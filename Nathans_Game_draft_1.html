@@ -19,20 +19,98 @@
 -level select
 -sprites
 */
+    
 let canvas;
-let canvasContext;
+    
+let canvasContext; 
+    
+let gravity = 9.8; // pixels/s
+    
+let interval;
+    
 let frameRate = 1000/60
+
 let showingWinScreen = false;
+    
 let enemyShootingInterval;
+    
+let hideDismiss = true;
+    
+let currentLevel;
+    
+let showingMenu = true
+    
 let heart = new Image(100, 200)
 heart.src = 'heart.png'
+    
 let spikeImage = new Image (100, 200) 
 spikeImage.src = 'spike.png'
+    
+    
+//character:{x,y,health,dir}
+//exit:{x,y}
+//platforms:[{x,y,width,height,color}...]
+//enemies:[{x,y,dir,leftX,leftY,rightX,rightY}...]
+//turrets:[{}...]
+//spikes:[{}...]
+
+let levels = [
+                {
+                    level: 1,
+                    character:{x:50, y:490, health:3, dir:"right"}, 
+                    exit:{x:270, y:245}, 
+                    platforms:[{x:-10, y:500, width:300, height:50, color:"black"}, {x:400, y:500, width:420, height:50, color:"black"}, {x:650, y:420, width:169, height:80, color:"black"}, {x:500, y:365, width:100, height:20, color:"black"}, {x:270, y:315, width:150, height:20, color:"black"}], 
+                    enemies:[], 
+                    turrets:[], 
+                    spikes:[{startX: 292.5, endX: 393.5, startY: 525, endY: 0, direction: 'up'}]
+                },
+                {
+                    level: 2,
+                    character:{x:100, y:465, health:3, dir:"right"}, 
+                    exit:{x:20, y:240}, 
+                    platforms:[{x:40, y:475, width:115, height:75, color:"black"}, {x:250, y:475, width:135, height:75, color:"black"}, {x:495, y:475, width:135, height:75, color:"black"}, {x:680, y:475, width:60, height:75, color:"black"}, {x:770, y:415, width:40, height:20, color:"black"}, {x:625, y:345, width:75, height:20, color:"black"}, {x:475, y:320, width:100, height:20, color:"black"}, {x:305, y:305, width:100, height:20, color:"black"}, {x:170, y:315, width:50, height:20, color:"black"}, {x:20, y:310, width:75, height:20, color:"black"}], 
+                    enemies:[], 
+                    turrets:[], 
+                    spikes:[{startX: -5, endX: 40, startY: 525, endY: 0, direction: 'up'}, {startX: 157.5, endX: 235, startY: 525, endY: 0, direction: 'up'}, {startX: 387.5, endX: 485, startY: 525, endY: 0, direction: 'up'}, {startX: 632.5, endX: 670, startY: 525, endY: 0, direction: 'up'}, {startX: 740, endX: 815, startY: 525, endY: 0, direction: 'up'}]
+                },
+                {
+                    level: 3,
+                    character:{x:10, y:540, health:3, dir:"right"}, 
+                    exit:{x:755, y:120}, 
+                    platforms:[{x:470, y:450, width:400, height:20, color:"black"}, {x:450, y:450, width:20, height:200, color:"black"}, {x:250, y:350, width:200, height:20, color:"black"}, {x:0, y:300, width:250, height:20, color:"black"}, {x:0, y:100, width:20, height:200, color:"black"}, {x:325, y:240, width:100, height:20, color:"black"}, {x:450, y:190, width:350, height:20, color:"black"}], 
+                    enemies:[{x:700, y:155, dir:"left-right", leftX:200, leftY:100, rightX:50, rightY:100}, {x:700, y:415, dir:"left-right", leftX:300, leftY:100, rightX:100, rightY:100}, {x:45, y:265, dir:"right", leftX:0, leftY:0, rightX:300, rightY:100}], 
+                    turrets:[], 
+                    spikes:[{startX: 425, endX: 0, startY: 485, endY: 550, direction: 'left'}, {startX: 45, endX: 0, startY: 150, endY: 300, direction: 'right'}]
+                },
+                {
+                    level: 4,
+                    character:{x:20, y:540, health:3, dir:"right"}, 
+                    exit:{x:565, y:480}, 
+                    platforms:[{x: 165, y:270, width:20, height:325}, {x:290, y:250, width:60, height:20}, {x:115, y:250, width:40, height:20}, {x:350, y:0, width:20, height:470}, {x:545, y:195, width:20, height:500}, {x:485, y:175, width:150, height:20}, {x:780, y:0, width:20, height:580}, {x:655, y:315, width:125, height:20}, {x:565, y:455, width:125, height:20},{x:-10, y:450, width:50, height:20}, {x:115, y:350, width:50, height:20}, {x:-10, y:250, width:50, height:20}, {x:370, y:450, width:50, height:20}, {x:495, y:350, width:50, height:20}, {x:370, y:250, width:50, height:20}], 
+                    enemies:[{x:335, y:215, dir:'left', leftX:350, leftY:125, rightX:0, rightY:0}, {x:530, y:515, dir:'left', leftX:375, leftY:150, rightX:0, rightY:0}], 
+                    turrets:[], 
+                    spikes:[{startX: 520, endX: 590, startY: 150, endY: 0, direction: 'up'}, {startX: 655, endX: 670, startY: 290, endY: 0, direction: 'up'}, {startX: 655, endX: 670, startY: 430, endY: 0, direction: 'up'}]
+                }
+             ]
+                    
+let platforms = []
+let enemies = []
+let turrets = []
+let spikes = []
+    
+let exit = {
+    x:0,
+    y:0,
+    width:50,
+    height:70,
+    color:"red"
+}
+
 let character1 = {
-    xPos: 10, //meters i think
-    yPos: 540, //meters i think
-    xVel: 0, //m/s
-    yVel: 0, //m/s
+    xPos: 10,
+    yPos: 540,
+    xVel: 0,
+    yVel: 0,
     jumping: false,
     health: 3,
     dead: false,
@@ -65,9 +143,7 @@ let character1 = {
         this.xVel = 0;
         this.yVel = 0;
         this.health = 3;
-        for (let i = 0; i < character1.bullets.length; i ++) {
-        character1.bullets.pop();
-        }
+        character1.bullets = []
     },
     healthBar () {
         switch (character1.health) {
@@ -96,6 +172,13 @@ let character1 = {
         }
     }
 };
+   
+    
+    
+    
+    
+    
+    
 class enemy {
     constructor(xPos, yPos, direction, leftX = 0, leftY = 0, rightX = 0, rightY = 0) {
         this.xPos = xPos
@@ -141,6 +224,7 @@ class enemy {
             }
         }
     }
+    
     shootBullets () {
         for(let i = 0; i < this.bullets.length; i++){
         this.bullets[i].moving()
@@ -153,9 +237,7 @@ class enemy {
     reset () {
         this.dead = false
         this.health = 5
-        for (let i = 0; i < this.bullets.length; i ++) {
-            this.bullets.pop()
-        }
+        this.bullets = []
     }
     healthBar () {
         switch (this.health) { 
@@ -191,6 +273,8 @@ class enemy {
         } 
     }
 }
+    
+    
 class turret {
     constructor(xPos, yPos, direction, leftX = 0, leftYDown = 0, leftYUp = 0, rightX = 0, rightYDown = 0, rightYUp = 0) {
         this.xPos = xPos;
@@ -242,11 +326,10 @@ class turret {
         }
     }
     reset () {
-        for (let i = 0; i < this.bullets.length; i ++) {
-            this.bullets.pop();
-        }
+        this.bullets = []
     }
 }
+    
 class bullet{
     constructor(x, y, vel, angle, type){
     this.xPos = x
@@ -283,7 +366,26 @@ class bullet{
                 setTimeout(() => {character1.justTookDamage = false}, 500)
                 character1.health --;
                 this.bulletMoving = false;
-        }
+            }
+            // platform collision
+            for (let i = 0; i < platforms.length; i ++) {
+                // left side
+                if (this.xPos > platforms[i].xPos - 10 && this.xPos < platforms[i].xPos && this.yPos > platforms[i].yPos && this.yPos < platforms[i].yPlusHeight) {
+                    this.bulletMoving = false;
+                }
+                // right side
+                if (this.xPos > platforms[i].xPlusWidth && this.xPos < platforms[i].xPlusWidth + 10 && this.yPos > platforms[i].yPos && this.yPos < platforms[i].yPlusHeight) {
+                    this.bulletMoving = false;
+                }
+                // top side
+                if (this.xPos > platforms[i].xPos && this.xPos < platforms[i].xPlusWidth && this.yPos > platforms[i].yPos - 10 && this.yPos < platforms[i].yPos) {
+                    this.bulletMoving = false;
+                }
+                // bottom side
+                if (this.xPos > platforms[i].xPos && this.xPos < platforms[i].xPlusWidth && this.yPos > platforms[i].yPlusHeight && this.yPos < platforms[i].yPlusHeight + 10) {
+                    this.bulletMoving = false;
+                }
+            }
         }
         if (this.bulletType === 'player') {
             createRect(this.xPos, this.yPos, 10, 5, 'green')
@@ -300,21 +402,36 @@ class bullet{
             if(this.xPos > canvas.width){
                 this.bulletMoving = false;
             }
-            if (showingLevel3) {
-                for (let i = 0; i < lvl3Enemies.length; i ++) {
-                    if (this.xPos > lvl3Enemies[i].xPos && this.xPos < lvl3Enemies[i].xPos + lvl3Enemies[i].width && this.yPos > lvl3Enemies[i].yPos && this.yPos < lvl3Enemies[i].yPos + lvl3Enemies[i].height && lvl3Enemies[i].justTookDamage === false) {
-                        lvl3Enemies[i].justTookDamage = true;
-                        setTimeout(() => lvl3Enemies[i].justTookDamage = false, 1000)
-                        lvl3Enemies[i].health --;
+            for (let i = 0; i < enemies.length; i ++) {
+                    if (this.xPos > enemies[i].xPos && this.xPos < enemies[i].xPos + enemies[i].width && this.yPos > enemies[i].yPos && this.yPos < enemies[i].yPos + enemies[i].height && enemies[i].justTookDamage === false) {
+                        enemies[i].justTookDamage = true;
+                        setTimeout(() => enemies[i].justTookDamage = false, 1000)
+                        enemies[i].health --;
                     }
+            }
+            // platform collision
+            for (let i = 0; i < platforms.length; i ++) {
+                // left side
+                if (this.xPos > platforms[i].xPos - 10 && this.xPos < platforms[i].xPos && this.yPos > platforms[i].yPos && this.yPos < platforms[i].yPlusHeight) {
+                    this.bulletMoving = false;
+                }
+                // right side
+                if (this.xPos > platforms[i].xPlusWidth && this.xPos < platforms[i].xPlusWidth + 10 && this.yPos > platforms[i].yPos && this.yPos < platforms[i].yPlusHeight) {
+                    this.bulletMoving = false;
+                }
+                // top side
+                if (this.xPos > platforms[i].xPos && this.xPos < platforms[i].xPlusWidth && this.yPos > platforms[i].yPos - 10 && this.yPos < platforms[i].yPos) {
+                    this.bulletMoving = false;
+                }
+                // bottom side
+                if (this.xPos > platforms[i].xPos && this.xPos < platforms[i].xPlusWidth && this.yPos > platforms[i].yPlusHeight && this.yPos < platforms[i].yPlusHeight + 10) {
+                    this.bulletMoving = false;
                 }
             }
         }
     }
-}
-let gravity = 9.8; // pixels/s
+}     
     
-let interval;
 class platform {
     constructor(x, y, width, height, color = 'black') {
         this.x = x
@@ -325,7 +442,7 @@ class platform {
         this.yPlusHeight = this.y + this.height
         this.xPlusWidth = this.x + this.width
     }
-    platformCreation() {
+    drawPlatform() {
         createPlatform(this.x, this.y, this.width, this.height, this.color)
     }
     collision () {
@@ -374,17 +491,7 @@ class platform {
         }
     }
 }
-function spikeCollision () {
-        character1.yVel = -character1.yVel*0.2; // bounciness 
-        if(character1.xVel != 50 && character1.xVel != -50){
-                    character1.xVel *= 0.9 //friction
-        }
-        if (character1.justTookDamage === false) {
-            character1.justTookDamage = true;
-            character1.health --;
-            setTimeout(() => character1.justTookDamage = false, 1000)
-        }
-}
+ 
 class spike {
     constructor (xPos, yPos, orientation) {
         this.xPos = xPos
@@ -393,7 +500,7 @@ class spike {
         this.width = 15
         this.height = 25
     }
-    createSpike () {
+    drawSpikes () {
         if (this.orientation === 'right') {
             canvasContext.save()
             canvasContext.translate(this.xPos, this.yPos)
@@ -498,323 +605,163 @@ class spike {
         }
     }
 }
-// this function takes in arrays
-function createLevel (platforms, enemies = false, turrets = false, spikes = false, exitX, exitY, playerResetXPos, playerResetYPos, level) {
-    if (character1.dead) {
-        createRect(0, 0, canvas.width, canvas.height, 'red')
-        createText('YOU DIED...', 300, 200, '40px', 'Arial', 'white')
-        createText('press f to pay respects', 300, 300, '20px', 'Arial', 'white')
-        character1.reset(playerResetXPos, playerResetYPos)
-        if (enemies) {
-            for (let i = 0; i < enemies.length; i ++) {
-                enemies[i].reset()
-            }
-        }
-        if (turrets) {
-            for (let i = 0; i < turrets.length; i ++) {
-                turrets[i].reset();
-            }
-        }
-        return;
-    }
-    if (platforms) {
-        for (let i = 0; i < platforms.length; i++) {
-            platforms[i].platformCreation();
-        }
-    }
-    if (enemies) {
-        for (let i = 0; i < enemies.length; i ++) {
-            enemies[i].drawEnemy();
-        }
-    }
-    if (turrets) {
-        for (let i = 0; i < turrets.length; i ++) {
-            turrets[i].drawTurret();
-        }
-    }
-    if (spikes) {
-        for (let i = 0; i < spikes.length; i ++) {
-            spikes[i].createSpike()
-        }
-    }
-    if (exitX) { // 750 120
-        createRect(exitX, exitY, 50, 70, 'red')
-        createText('EXIT', exitX + 7.5, exitY + 30, '15px', 'Arial', 'white');
-    }
-    switch (level) {
-        case 1:
-            if (character1.xPos > exitX && character1.xPos < exitX + 50 && character1.yPos < exitY + 70 && character1.yPos > exitY) {
-            showingLevel1 = false;
-            level2dismiss = true;
-            showingLevel2 = true;
-            }
-            break;
-        case 2: 
-            if (character1.xPos > exitX && character1.xPos < exitX + 50 && character1.yPos < exitY + 70 && character1.yPos > exitY) {
-                showingLevel2 = false;
-                level3dismiss = true;
-                showingLevel3 = true;
-            }
-            break;
-        case 3: 
-            if (character1.xPos > exitX && character1.xPos < exitX + 50 && character1.yPos < exitY + 70 && character1.yPos > exitY) {
-                showingLevel3 = false;
-                level4dismiss = true;
-                showingLevel4 = true;
-            }
-            break;
-        case 4: 
-            if (character1.xPos > exitX && character1.xPos < exitX + 50 && character1.yPos < exitY + 70 && character1.yPos > exitY) {
-                showingLevel4 = false;
-                level5dismiss = true;
-                showingLevel5 = true;
-            }
-            break;
-        case 5: 
-            if (character1.xPos > exitX && character1.xPos < exitX + 50 && character1.yPos < exitY + 70 && character1.yPos > exitY) {
-                showingLevel5 = false;
-                level6dismiss = true;
-                showingLevel6 = true;
-            }
-            break;
-        case 6: 
-            if (character1.xPos > exitX && character1.xPos < exitX + 50 && character1.yPos < exitY + 70 && character1.yPos > exitY) {
-                showingLevel6 = false;
-                level7dismiss = true;
-                showingLevel7 = true;
-            }
-            break;
-        case 7: 
-            if (character1.xPos > exitX && character1.xPos < exitX + 50 && character1.yPos < exitY + 70 && character1.yPos > exitY) {
-                showingLevel7 = false;
-                level8dismiss = true;
-                showingLevel8 = true;
-            }
-            break;
-        case 8: 
-            if (character1.xPos > exitX && character1.xPos < exitX + 50 && character1.yPos < exitY + 70 && character1.yPos > exitY) {
-                showingLevel8 = false;
-                level9dismiss = true;
-                showingLevel9 = true;
-            }
-            break;
-        case 9: 
-            if (character1.xPos > exitX && character1.xPos < exitX + 50 && character1.yPos < exitY + 70 && character1.yPos > exitY) {
-                showingLevel9 = false;
-                level10dismiss = true;
-                showingLevel10 = true;
-            }
-            break;
-        case 10: 
-            if (character1.xPos > exitX && character1.xPos < exitX + 50 && character1.yPos < exitY + 70 && character1.yPos > exitY) {
-                showingLevel3 = false;
-                level4dismiss = true;
-                showingLevel4 = true;
-            }
-            break;
-    }
-}
-// takes in arrays as well
-function moveLevel (platforms, enemies, turrets, spikes) {
-    if (platforms) {
-        for (let i = 0; i < platforms.length; i ++) {
-            platforms[i].collision();
-        }
-    }
-    if (enemies) {
-        for (let i = 0; i < enemies.length; i ++) {
-            enemies[i].shootBullets();
-            enemies[i].healthBar()
-        }
-    }
-    if (turrets) {
-        for (let i = 0; i < turrets.length; i ++) {
-            turrets[i].shootBullets();
-        }
-    }
-    if (spikes) {
-        for (let i = 0; i < spikes.length; i ++) {
-            spikes[i].collision();
-        }
-    }
-}
-function enemyAndTurretAILevel (enemies, turrets) {
-    if (enemies) {
-        for (let i = 0; i < enemies.length; i ++) {
-            enemies[i].enemyAI()
-        }
-    }
-    if (turrets) {
-        for (let i = 0; i < turrets.length; i ++) {
-            turrets[i].turretAI();
-        }
-    }
-}
-// if showing Levels
-let showingMenu = true;
-let showingLevel1 = false;
-let level1dismiss = false;
-let showingLevel2 = false;
-let level2dismiss = false;
-let showingLevel3 = false;
-let level3dismiss = false;
-let showingLevel4 = false;
-let level4dismiss = false;
-let showingLevel5 = false;
-let level5dismiss = false;
-let showingLevel6 = false;
-let level6dismiss = false;
-let showingLevel7 = false;
-let level7dismiss = false;
-let showingLevel8 = false;
-let level8dismiss = false;
-let showingLevel9 = false;
-let level9dismiss = false;
-let showingLevel10 = false;
-let level10dismiss = false;
-// spikes, enemies and turrets
-let lvl1Spikes = []
-for (let i = 292.5; i < 393.5; i += 15) {
-    lvl1Spikes.push(new spike(i, 525, 'up'))
-}
-let lvl2Spikes = []
-for (let i = -5; i < 40; i += 15) {
-    lvl2Spikes.push (new spike (i, 525, 'up'))
-}
-for (let i = 157.5; i < 235; i += 15) {
-    lvl2Spikes.push (new spike (i, 525, 'up'))
-}
-for (let i = 387.5; i < 485; i += 15) {
-    lvl2Spikes.push (new spike (i, 525, 'up'))
-}
-for (let i = 632.5; i < 670; i += 15) {
-    lvl2Spikes.push (new spike (i, 525, 'up'))
-}
-for (let i = 740; i < 815; i += 15) {
-    lvl2Spikes.push (new spike (i, 525, 'up'))
-}
-let lvl3Spikes = []
-for (let i = 485; i < 550; i += 15) {
-    lvl3Spikes.push(new spike (425, i, 'left'))
-}
-for (let i = 150; i < 300; i += 15) {
-    lvl3Spikes.push(new spike (45, i, 'right'))
-}
-let lvl3Enemies = [new enemy(700, 155, 'left-right', 200, 100, 50, 100), new enemy(700, 415, 'left-right', 300, 100, 100, 100), new enemy(45, 265, 'right', 0, 0, 300, 100)]
-let lvl4Spikes = []
-let lvl4Platforms = []
-let lvl4Enemies = []
-function drawMenu() {
-    if (showingMenu) {
-        createRect(0, 0, canvas.width, canvas.height, 'black')
-        createText('Press C to Start', 200, 150, "50px", "Arial", 'white')
-        createText('Press Q to Shoot', 265, 300, "30px", "Arial", 'white')
-    }
-}
 
-    window.onload = () => {
-        canvas = document.getElementById("gameCanvas"); 
-        canvasContext = canvas.getContext('2d');
-        interval = setInterval(function () {drawLevel1();moveLevel1();},frameRate)
-        enemyShootingInterval = setInterval(enemyShooting, 1000)
-        document.addEventListener('keydown', keydown)
-        document.addEventListener('keyup', keyup)
-    }
-function enemyShooting () {
-    if (showingLevel3) {
-        enemyAndTurretAILevel(lvl3Enemies, false)
-    }
+
+function spikeCollision () {
+        character1.yVel = -character1.yVel*0.2; // bounciness 
+        if(character1.xVel != 50 && character1.xVel != -50){
+                    character1.xVel *= 0.9 //friction
+        }
+        if (character1.justTookDamage === false) {
+            character1.justTookDamage = true;
+            character1.health --;
+            setTimeout(() => character1.justTookDamage = false, 1000)
+        }
 }
-function drawLevel1 () {
-    if (showingMenu) {
-        drawMenu()
-        level1dismiss = true
-        showingLevel1 = true
-        return;
+    
+    
+    
+    
+    
+    
+    
+
+    
+function loadLevel (level){
+    
+    character1.reset(level.character.x,level.character.y)
+    character1.dir = level.character.dir
+    
+    platforms = []
+    enemies = []
+    turrets = []
+    spikes = []
+    
+    currentLevel = level.level
+    
+    exit.x = level.exit.x
+    exit.y = level.exit.y
+    
+    console.log(exit)
+    
+    for(i=0;i<level.platforms.length;i++){
+        platforms.push(new platform(level.platforms[i].x,level.platforms[i].y,level.platforms[i].width,level.platforms[i].height,level.platforms[i].color))
     }
-    if (showingWinScreen) {
+    
+    for(i=0;i<level.enemies.length;i++){
+        enemies.push(new enemy(level.enemies[i].x,level.enemies[i].y,level.enemies[i].dir,level.enemies[i].leftX,level.enemies[i].leftY,level.enemies[i].rightX,level.enemies[i].rightY))
+    }
+    
+    for(i=0;i<level.turrets.length;i++){
+        platforms.push()
+    }
+    
+    for(i=0;i<level.spikes.length;i++){
+        if(level.spikes[i].direction == "left" || level.spikes[i].direction == "right"){
+            for (let e = level.spikes[i].startY; e < level.spikes[i].endY; e += 15) {
+                spikes.push(new spike(level.spikes[i].startX, e, level.spikes[i].direction))
+            }
+        }
+        console.log(level.spikes)
+        
+        if(level.spikes[i].direction == "up" || level.spikes[i].direction == "up"){
+            for (let e = level.spikes[i].startX; e < level.spikes[i].endX; e += 15) {
+                spikes.push(new spike(e, level.spikes[i].startY, level.spikes[i].direction))
+            }
+        }
+    }
+    
+    createRect(0, 0, canvas.width, canvas.height, 'white')
+    createText("level "+level.level, 400, 300, '50px', 'Arial', 'black')
+    createText('Press E to Begin', 400, 400, '25px', 'Arial', 'Black')
+    hideDismiss = false;
+}
+  
+
+    
+    
+function drawLevel(){ 
+    //clearing previous frame
+    canvasContext.clearRect(0,0,canvas.width,canvas.height)
+    
+    /*if (showingWinScreen) {
         createRect(0, 0, canvas.width, canvas.height, 'white')
         createText('YOU WIN!', 400, 300, '40px', 'Arial', 'black')
         createText('Press E to Restart', 400, 400, '20px', 'Arial', 'black');
         character1.xPos = 10
         character1.yPos = 540;
         return;
-    }
-    if (level1dismiss && showingMenu === false) {
-        createLevelDismiss('Level 1', 50, 490)
+    }*/
+    
+    //draws deeath screen
+    if (character1.dead) {
+        createRect(0, 0, canvas.width, canvas.height, 'red')
+        createText('YOU DIED...', 300, 200, '40px', 'Arial', 'white')
+        createText('press f to pay respects', 300, 300, '20px', 'Arial', 'white')
+        
+        character1.reset(levels[currentLevel-1].character.x, levels[currentLevel-1].character.y)
+        
+        for (let i = 0; i < enemies.length; i ++) {
+            enemies[i].reset()
+        }
+        
+        for (let i = 0; i < turrets.length; i ++) {
+            turrets[i].reset();
+        }
+        
         return;
     }
-    if (level2dismiss) {
-        createLevelDismiss('Level 2', 100, 465)
-        return;
-    }
-    if (level3dismiss) {
-        createLevelDismiss('Level 3', 20, 540)
-        return;
-    }
-    if (level4dismiss) {
-        createLevelDismiss('Level 4', 20, 540)
-        return;
-    }
-    if (level5dismiss) {
-        createLevelDismiss('Level 5', 20, 540)
-        return;
-    }
-    if (level6dismiss) {
-        createLevelDismiss('Level 6', 20, 540)
-        return;
-    }
-    if (level7dismiss) {
-        createLevelDismiss('Level 7', 20, 540)
-        return;
-    }
-    if (level8dismiss) {
-        createLevelDismiss('Level 8', 20, 540)
-        return;
-    }
-    if (level9dismiss) {
-        createLevelDismiss('Level 9', 20, 540)
-        return;
-    }
-    if (level10dismiss) {
-        createLevelDismiss('Level 10', 20, 540)
-        return;
-    }
-    //clearing previous frame
-    canvasContext.clearRect(0,0,canvas.width,canvas.height)
+    
     // this draws the bottom thing
     createRect(0, 550, canvas.width, 50, 'black');
+    
     // this draws the character
-    character1.drawCharacter();
-    if (showingLevel1 && level1dismiss === false) {
-        createLevel([new platform(-10, 500, 300, 50, 'black'), new platform(400, 500, 420, 50), new platform(650, 420, 169, 80, 'black'), new platform(500, 365, 100, 20, 'black'), new platform(270, 315, 150, 20, 'black')], false, false, lvl1Spikes, 270, 245, 50, 490, 1)
+    character1.drawCharacter()
+    
+    //draws healthbar
+    character1.healthBar() 
+    
+    //this draws platforms
+    for(i = 0; i < platforms.length; i++){
+        platforms[i].drawPlatform()
     }
-    if (showingLevel2 && level2dismiss === false) {
-        createLevel([new platform (40, 475, 115, 75, 'black'), new platform(250, 475, 135, 75, 'black'), new platform(495, 475, 135, 75, 'black'), new platform(680, 475, 60, 75, 'black'), new platform (770, 415, 40, 20, 'black'), new platform (625, 345, 75, 20, 'black'), new platform (475, 320, 100, 20, 'black'), new platform (305, 305, 100, 20, 'black'), new platform(170, 315, 50, 20, 'black'), new platform(20, 310, 75, 20, 'black')], false, false, lvl2Spikes, 20, 240, 100, 465, 2)
+    
+    //this draws enemies
+    for(i = 0; i < enemies.length; i++){
+        enemies[i].drawEnemy()
     }
-    if (showingLevel3 && level3dismiss === false) {
-        createLevel([new platform(470, 450, 400, 20, 'black'), new platform(450, 450, 20, 200, 'black'), new platform(250, 350, 200, 20, 'black'), new platform(0, 300, 250, 20, 'black'), new platform(00, 100, 20, 200, 'black'), new platform(325, 240, 100, 20, 'black'), new platform(450, 190, 350, 20, 'black')], lvl3Enemies, false, 
-lvl3Spikes,755, 120, 10, 540, 3)
+    
+    //this draws spikes
+    for(i = 0; i < spikes.length; i++){
+        spikes[i].drawSpikes()
     }
-    if (showingLevel4 && level4dismiss === false) {
-        createLevel(lvl4Platforms, lvl4Enemies, false, lvl4Spikes, 755, 120, 10, 540, 4)
+    
+    //this draws turrets
+    for(i = 0; i < turrets.length; i++){
+        spikes[i].drawTurret()
+    }
+    
+    //this draws the exit
+    createRect(exit.x, exit.y, exit.width, exit.height, exit.color)
+    createText('EXIT', exit.x + 7.5, exit.y + 30, '15px', 'Arial', 'white');
+    //loading next level
+    if (character1.xPos > exit.x && character1.xPos < exit.x + exit.width && character1.yPos < exit.y + exit.height && character1.yPos > exit.y) {
+        clearInterval(interval)
+        loadLevel(levels[currentLevel])
     }
 }
-function moveLevel1() {
     
-    if (showingMenu) {
-        return;
-    }
-    if (level1dismiss) {
-        return;
-    }
+function updateLevel(){
+
     if (showingWinScreen) {
         return;
     }
     if (character1.dead) {
         return;
     }
+    
     character1.shoot()
+    
     // character1 gravity
     character1.yVel += gravity;
     character1.yPos += character1.yVel/frameRate
@@ -831,29 +778,69 @@ function moveLevel1() {
                 character1.xVel *= 0.9 //friction
             }
         }
+    
     character1.shootBullets()
+    
     // preventing character1 from going off the screen.
     if (character1.xPos < 0) {
         character1.xPos = 0;
     } else if (character1.xPos > canvas.width) {
         character1.xPos = canvas.width;
     }
-    if (showingLevel1 && level1dismiss === false) {
-        character1.healthBar() 
-        moveLevel([new platform(-10, 500, 300, 50, 'black'), new platform(400, 500, 420, 50, 'black'), new platform(700, 460, 110, 40, 'black'), new platform(650, 420, 169, 80, 'black'), new platform(500, 365, 100, 20, 'black'), new platform(270, 315, 150, 20, 'black')], false, false, lvl1Spikes)
+    
+    for (let i = 0; i < platforms.length; i ++) {
+        platforms[i].collision();
     }
-    if (showingLevel2 && level2dismiss === false) {
-        character1.healthBar()
-        moveLevel([new platform (40, 475, 115, 75, 'black'), new platform(250, 475, 135, 75, 'black'), new platform(495, 475, 135, 75, 'black'), new platform(680, 475, 60, 75, 'black'), new platform (770, 415, 40, 20, 'black'), new platform (625, 345, 75, 20, 'black'), new platform (475, 320, 100, 20, 'black'), new platform (305, 305, 100, 20, 'black'), new platform(170, 315, 50, 20, 'black'), new platform(20, 310, 75, 20, 'black')], false, false, lvl2Spikes)
+    for (let i = 0; i < enemies.length; i ++) {
+        enemies[i].shootBullets();
     }
-    if (showingLevel3 && level3dismiss === false) {
-        character1.healthBar()
-        moveLevel([new platform(470, 450, 400, 20, 'black'), new platform(450, 450, 20, 200, 'black'), new platform(250, 350, 200, 20, 'black'), new platform(0, 300, 250, 20, 'black'), new platform(00, 100, 20, 200, 'black'), new platform(325, 240, 100, 20, 'black'), new platform(450, 190, 350, 20, 'black')], lvl3Enemies, false, lvl3Spikes)
+    for (let i = 0; i < enemies.length; i ++) {
+        enemies[i].healthBar();
     }
-    if (showingLevel4 && level4dismiss === false) {
-        moveLevel(lvl4Platforms, lvl4Enemies, false, lvl4Spikes)
+    for (let i = 0; i < turrets.length; i ++) {
+        turrets[i].shootBullets();
+    }
+    
+    for (let i = 0; i < spikes.length; i ++) {
+        spikes[i].collision();
     }
 }
+    
+function enemyAndTurretAILevel (enemies, turrets) {
+        for (let i = 0; i < enemies.length; i ++) {
+            enemies[i].enemyAI()
+        }
+    
+        for (let i = 0; i < turrets.length; i ++) {
+            turrets[i].turretAI();
+        }
+}
+
+
+
+function drawMenu() {
+    if (showingMenu) {
+        createRect(0, 0, canvas.width, canvas.height, 'black')
+        createText('Press C to Start', 200, 150, "50px", "Arial", 'white')
+        createText('Press Q to Shoot', 265, 300, "30px", "Arial", 'white')
+    }
+}
+    
+    
+
+    window.onload = () => {
+        canvas = document.getElementById("gameCanvas"); 
+        canvasContext = canvas.getContext('2d');
+        
+        drawMenu()
+        
+        enemyShootingInterval = setInterval(() => {enemyAndTurretAILevel(enemies, turrets)}, 1000)
+        
+        document.addEventListener('keydown', keydown)
+        document.addEventListener('keyup', keyup)
+    }
+    
+    
     
 function keydown (evt){
     moveRight(evt, "down")
@@ -893,8 +880,9 @@ function shoot (evt){
     }
 }
 function getRidOfMenu (evt) {
-    if (evt.code == 'KeyC') {
+    if (evt.code == 'KeyC' && showingMenu == true) {
         showingMenu = false;
+        loadLevel(levels[0])
     }
 }
 function dismissWin (evt) {
@@ -908,17 +896,9 @@ function revive (evt) {
     }
 }
 function dismissLevelLoading (evt) {
-    if (evt.keyCode === 69) {
-    level1dismiss = false;
-    level2dismiss = false;
-    level3dismiss = false;
-    level4dismiss = false;
-    level5dismiss = false;
-    level6dismiss = false;
-    level7dismiss = false;
-    level8dismiss = false;
-    level9dismiss = false;
-    level10dismiss = false;
+    if (evt.keyCode === 69 && hideDismiss == false) {
+        hideDismiss = true;
+        interval = setInterval(function () {drawLevel();updateLevel();},frameRate)
     }
 }
 function keyup(evt){
@@ -930,12 +910,14 @@ function keyup(evt){
     revive(evt);
     dismissLevelLoading(evt);
 }
+    
 function createLevelDismiss (level, playerStartX, playerStartY) {
     character1.reset(playerStartX, playerStartY)
     createRect(0, 0, canvas.width, canvas.height, 'white')
     createText(level, 400, 300, '50px', 'Arial', 'black')
     createText('Press E to Begin', 400, 400, '25px', 'Arial', 'Black')
 }
+    
 function createRect(x, y, width, height, color) {
     canvasContext.fillStyle = color;
     canvasContext.fillRect(x, y, width, height);
